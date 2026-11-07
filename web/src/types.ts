@@ -44,6 +44,19 @@ export interface SettingsPayload {
   configured: boolean
 }
 
+export type ControlAction = 'screen_off' | 'shutdown'
+
+export interface ControlResponse {
+  ok: boolean
+  action: ControlAction
+  state: 'queued'
+}
+
+export interface ControlState {
+  state: string
+  available: boolean
+}
+
 export type ActivityState = 'active' | 'finishing' | 'completed'
 
 export interface UserActivity {

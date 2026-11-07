@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   agent:
-    image: xianbao-r1-core:0.3.0
+    image: xianbao-r1-core:0.4.0
     build: .
     container_name: r1-panel-agent
     command: ["python", "/app/server/agent.py"]
@@ -11,20 +11,23 @@ services:
     pid: host
     environment:
       R1_PANEL_RUNTIME_DIR: /runtime
+      R1_PANEL_CONTROL_DIR: /control
       R1_PANEL_HOST_ROOT: /host
       R1_PANEL_USE_NSENTER: "true"
       R1_PANEL_MONITOR_PATHS: /host/volume2
     volumes:
       - r1-panel-runtime:/runtime
+      - r1-panel-control:/control
       - /:/host:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   web:
-    image: xianbao-r1-core:0.3.0
+    image: xianbao-r1-core:0.4.0
     build: .
     container_name: r1-panel-web
-    command: /usr/local/bin/r1-root-launch --prepare-config python /app/server/app.py --host 0.0.0.0 --port 8080 --snapshot-dir /runtime --config-dir /config
+    command: /usr/local/bin/r1-root-launch --prepare-data python /app/server/app.py --host 0.0.0.0 --port 8080 --snapshot-dir /runtime --config-dir /config --control-dir /control
     restart: unless-stopped
+    network_mode: host
     read_only: true
     tmpfs:
       - /tmp
@@ -33,8 +36,7 @@ services:
     volumes:
       - r1-panel-runtime:/runtime:ro
       - r1-panel-config:/config
-    ports:
-      - "8080:8080"
+      - r1-panel-control:/control
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3)"]
       interval: 15s
@@ -42,7 +44,7 @@ services:
       retries: 3
 
   display:
-    image: xianbao-r1-display:0.3.0
+    image: xianbao-r1-display:0.4.0
     build:
       context: .
       dockerfile: Dockerfile.display
@@ -56,10 +58,13 @@ services:
     environment:
       PANEL_URL: http://127.0.0.1:8080
       R1_LOAD_TOUCH: "true"
+      R1_PANEL_CONTROL_DIR: /control
     volumes:
       - /run/udev:/run/udev:ro
       - /lib/modules:/host-lib-modules:ro
+      - r1-panel-control:/control
 
 volumes:
   r1-panel-runtime:
   r1-panel-config:
+  r1-panel-control:

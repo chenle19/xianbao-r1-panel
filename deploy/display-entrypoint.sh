@@ -20,4 +20,35 @@ if [ "${R1_LOAD_TOUCH:-true}" = "true" ]; then
   load_module evdev /host-lib-modules/evdev.ko
 fi
 chvt 1 >/dev/null 2>&1 || true
-exec cog --platform=drm "$PANEL_URL"
+CONTROL_DIR=${R1_PANEL_CONTROL_DIR:-/control}
+mkdir -p "$CONTROL_DIR"
+
+set_dpms() {
+  value="$1"
+  connector=$(modetest -M i915 -c 2>/dev/null | awk '$3 == "connected" && $4 ~ /^DSI/ { print $1; exit }')
+  [ -n "$connector" ] && modetest -M i915 -w "$connector:2:$value" >/dev/null 2>&1 || true
+}
+
+while true; do
+  rm -f "$CONTROL_DIR/screen_on.state"
+  set_dpms 0
+  printf '{"screen":"on"}\n' > "$CONTROL_DIR/screen.state"
+  cog --platform=drm "$PANEL_URL" &
+  COG_PID=$!
+  while kill -0 "$COG_PID" 2>/dev/null; do
+    if [ -f "$CONTROL_DIR/screen_off.request" ]; then
+      rm -f "$CONTROL_DIR/screen_off.request"
+      kill "$COG_PID" 2>/dev/null || true
+      wait "$COG_PID" 2>/dev/null || true
+      set_dpms 3
+      printf '{"screen":"off"}\n' > "$CONTROL_DIR/screen.state"
+      /usr/local/bin/r1-touch-wake || true
+      set_dpms 0
+      printf '{"screen":"on"}\n' > "$CONTROL_DIR/screen.state"
+      break
+    fi
+    sleep 0.15
+  done
+  wait "$COG_PID" 2>/dev/null || true
+  sleep 0.2
+done

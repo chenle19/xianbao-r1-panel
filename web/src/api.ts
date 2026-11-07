@@ -1,5 +1,5 @@
 import { getMockActivity, getMockDisks, getMockSecurity, getMockStatus, setMockThreat } from './mock'
-import type { ActivityPayload, DisksPayload, SecurityPayload, SettingsPayload, StatusPayload } from './types'
+import type { ActivityPayload, ControlAction, ControlResponse, ControlState, DisksPayload, SecurityPayload, SettingsPayload, StatusPayload } from './types'
 
 // 生产环境必须默认读取 NAS 实时接口。只有明确设置 VITE_USE_MOCK=true
 // 时才启用演示数据，避免漏配环境变量后把模拟硬盘当成真实硬盘。
@@ -54,4 +54,19 @@ export async function fetchActivity(): Promise<ActivityPayload> {
 export async function fetchSecurity(): Promise<SecurityPayload> {
   if (forceMock) return getMockSecurity()
   return request<SecurityPayload>('/api/security')
+}
+
+export async function sendControl(action: ControlAction): Promise<ControlResponse> {
+  const response = await fetch('/api/control', {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...(action === 'shutdown' ? { confirm: 'shutdown' } : {}) }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.json() as Promise<ControlResponse>
+}
+
+export function fetchControlState(): Promise<ControlState> {
+  return request<ControlState>('/api/control')
 }

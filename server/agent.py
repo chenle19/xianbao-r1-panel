@@ -11,6 +11,7 @@ from collectors.disks import collect_disks
 from collectors.security import SecurityMonitor
 from collectors.system import SystemCollector
 from config import load_config
+from control import HostControlProcessor
 
 
 def main() -> None:
@@ -21,6 +22,7 @@ def main() -> None:
     runtime = Path(config["runtime_dir"])
     runtime.mkdir(parents=True, exist_ok=True)
     system = SystemCollector(config)
+    controls = HostControlProcessor(config)
     security = SecurityMonitor(config) if config.get("security_enabled", False) else None
     if security:
         security.start()
@@ -36,6 +38,7 @@ def main() -> None:
     while running:
         now = time.monotonic()
         try:
+            controls.poll()
             if now >= due["status"]:
                 atomic_write_json(runtime / "status.json", system.collect())
                 due["status"] = now + float(config["status_poll_interval_sec"])

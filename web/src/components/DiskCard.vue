@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import diskIcon from '../assets/icons/disk.png'
 import sleepIcon from '../assets/icons/sleep.png'
 import detailSprite from '../assets/icons/disk-details-sprite.webp'
 import { formatBytes, formatHours } from '../format'
 import type { DiskInfo } from '../types'
 
-const props = defineProps<{ disk: DiskInfo; slot: number }>()
-const expanded = ref(false)
+defineProps<{ disk: DiskInfo; slot: number }>()
 
 function stateLabel(state: DiskInfo['state']) {
   return { active: '运行中', standby: '休眠', error: '异常' }[state]
@@ -22,7 +20,7 @@ function tempClass(temp: number | null) {
 </script>
 
 <template>
-  <article class="disk-card" :class="[`state-${disk.state}`, { expanded }]" @click="expanded = !expanded">
+  <article class="disk-card" :class="`state-${disk.state}`">
     <div class="disk-card-head">
       <div class="bay-badge"><span>{{ slot }}</span><small>盘位</small></div>
       <div>
@@ -47,11 +45,7 @@ function tempClass(temp: number | null) {
         <div><span class="sprite-icon icon-hours" :style="{ backgroundImage: `url(${detailSprite})` }"></span><dt>通电</dt><dd>{{ formatHours(disk.power_on_hours) }}</dd></div>
         <div><span class="sprite-icon icon-capacity" :style="{ backgroundImage: `url(${detailSprite})` }"></span><dt>容量</dt><dd>{{ disk.capacity_bytes ? formatBytes(disk.capacity_bytes) : '--' }}</dd></div>
       </dl>
-      <div class="disk-more" :class="{ visible: expanded }">
-        <span>系统设备路径</span><code>{{ props.disk.device }}</code>
-      </div>
     </template>
     <p v-else class="disk-error">{{ disk.error || '无法读取 SMART 信息' }}</p>
-    <button class="expand-hint" type="button" :aria-label="expanded ? '收起硬盘详情' : '展开硬盘详情'" @click.stop="expanded = !expanded"><i></i></button>
   </article>
 </template>

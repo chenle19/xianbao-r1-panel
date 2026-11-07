@@ -17,6 +17,8 @@ const hottestDisk = computed(() => {
   const values = props.disks.map((disk) => disk.temperature_c).filter((value): value is number => value !== null)
   return values.length ? Math.max(...values) : null
 })
+const cpuRing = computed(() => ({ '--progress': `${Math.max(0, Math.min(100, props.status.cpu.usage_percent)) * 3.6}deg` }))
+const memoryRing = computed(() => ({ '--progress': `${Math.max(0, Math.min(100, props.status.memory.usage_percent)) * 3.6}deg` }))
 
 function compactUptime(totalSeconds: number) {
   const days = Math.floor(totalSeconds / 86400)
@@ -40,14 +42,15 @@ function tempTone(value: number | null) {
         <img :src="cpuIcon" alt="" />
       </div>
       <div class="cpu-primary">
-        <div class="overview-percent"><b>{{ Math.round(status.cpu.usage_percent) }}</b><span>%</span><small>使用率</small></div>
+        <div class="usage-ring cpu-ring" :style="cpuRing">
+          <div><b>{{ Math.round(status.cpu.usage_percent) }}</b><span>%</span></div>
+        </div>
         <div class="cpu-temperature" :class="`temp-${tempTone(status.cpu.temperature_c)}`">
           <span>核心温度</span>
           <strong>{{ status.cpu.temperature_c ?? '--' }}<small v-if="status.cpu.temperature_c !== null">°C</small></strong>
           <em>{{ status.cpu.temperature_c !== null && status.cpu.temperature_c > 50 ? '温度偏高' : '温度正常' }}</em>
         </div>
       </div>
-      <div class="cpu-meter"><i :style="{ transform: `scaleX(${Math.max(.02, status.cpu.usage_percent / 100)})` }"></i></div>
       <!-- <div class="load-grid">
         <div><span>1 分钟</span><b>{{ status.cpu.load1.toFixed(2) }}</b><i :style="{ transform: `scaleX(${Math.min(1, status.cpu.load1 / 4)})` }"></i></div>
         <div><span>5 分钟</span><b>{{ status.cpu.load5.toFixed(2) }}</b><i :style="{ transform: `scaleX(${Math.min(1, status.cpu.load5 / 4)})` }"></i></div>
@@ -61,14 +64,15 @@ function tempTone(value: number | null) {
         <img :src="memoryIcon" alt="" />
       </div>
       <div class="memory-content">
-        <div class="overview-percent amber"><b>{{ Math.round(status.memory.usage_percent) }}</b><span>%</span><small>已占用</small></div>
-        <div class="flex right-memory">
+        <div class="usage-ring memory-ring" :style="memoryRing">
+          <div><b>{{ Math.round(status.memory.usage_percent) }}</b><span>%</span></div>
+        </div>
+        <div class="memory-breakdown">
           <div><dt>用</dt><dd>{{ usedGb.toFixed(1) }} <span>GB</span></dd></div>
           <div><dt>未</dt><dd>{{ availableGb.toFixed(1) }} <span>GB</span></dd></div>
           <div><dt>总</dt><dd>{{ totalGb.toFixed(0) }} <span>GB</span></dd></div>
         </div>
       </div>
-      <div class="memory-meter"><i :style="{ transform: `scaleX(${Math.max(.02, status.memory.usage_percent / 100)})` }"></i><span :style="{ left: `${status.memory.usage_percent}%` }"></span></div>
     </section>
 
     <section class="overview-summary">

@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 
 from collectors.disks import parse_smartctl
+from control import validate_control_request
 
 
 class SmartctlParserTest(unittest.TestCase):
@@ -20,6 +21,20 @@ class SmartctlParserTest(unittest.TestCase):
         self.assertEqual(parsed["state"], "active")
         self.assertEqual(parsed["temperature_c"], 31)
         self.assertEqual(parsed["reallocated_sectors"], 0)
+
+
+class ControlRequestTest(unittest.TestCase):
+    def test_screen_off_request(self):
+        self.assertEqual(validate_control_request({"action": "screen_off"}), ("screen_off", None))
+
+    def test_shutdown_requires_explicit_confirmation(self):
+        action, error = validate_control_request({"action": "shutdown"})
+        self.assertIsNone(action)
+        self.assertEqual(error, "shutdown confirmation required")
+        self.assertEqual(
+            validate_control_request({"action": "shutdown", "confirm": "shutdown"}),
+            ("shutdown", None),
+        )
 
     def test_standby_disk(self):
         parsed = parse_smartctl("/dev/sata3", "", "Device is in STANDBY mode", 2)

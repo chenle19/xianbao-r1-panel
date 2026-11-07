@@ -7,6 +7,7 @@ from pathlib import Path
 
 DEFAULTS = {
     "runtime_dir": "/runtime",
+    "control_dir": "/control",
     "host_root": "/host",
     "smartctl_path": "/usr/bin/smartctl",
     "smbstatus_path": "/usr/local/packages/@appstore/SMBService/usr/bin/smbstatus",
@@ -33,6 +34,7 @@ def load_config(path: str | None = None) -> dict:
 
     env_map = {
         "R1_PANEL_RUNTIME_DIR": "runtime_dir",
+        "R1_PANEL_CONTROL_DIR": "control_dir",
         "R1_PANEL_HOST_ROOT": "host_root",
         "R1_PANEL_SMARTCTL": "smartctl_path",
         "R1_PANEL_SMBSTATUS": "smbstatus_path",

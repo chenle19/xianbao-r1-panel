@@ -3,7 +3,7 @@ FROM debian:bookworm-slim
 RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       weston cog libwpebackend-fdo-1.0-1 seatd kbd kmod \
+       weston cog libwpebackend-fdo-1.0-1 seatd kbd kmod libdrm-tests \
        libgl1-mesa-dri libegl1-mesa libgles2-mesa \
        fonts-noto-cjk ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -11,13 +11,15 @@ RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.li
 COPY deploy/display-entrypoint.sh /usr/local/bin/r1-display
 COPY deploy/touch /opt/r1-touch
 COPY deploy/root-launch.c /tmp/root-launch.c
+COPY deploy/touch-wake.c /tmp/touch-wake.c
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libc6-dev \
     && gcc -O2 -s -o /usr/local/bin/r1-root-launch /tmp/root-launch.c \
+    && gcc -O2 -s -o /usr/local/bin/r1-touch-wake /tmp/touch-wake.c \
     && chown root:root /usr/local/bin/r1-root-launch \
     && chmod 4755 /usr/local/bin/r1-root-launch \
     && chmod +x /usr/local/bin/r1-display \
-    && rm -f /tmp/root-launch.c \
+    && rm -f /tmp/root-launch.c /tmp/touch-wake.c \
     && apt-get purge -y --auto-remove gcc libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/usr/local/bin/r1-root-launch", "/usr/local/bin/r1-display"]

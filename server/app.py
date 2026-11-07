@@ -10,6 +10,8 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from control import queue_control_request, validate_control_request
+
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 DEFAULT_MASCOT_NAME = "娴宝"
@@ -35,7 +37,7 @@ def mock_payload(name: str) -> dict:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "XianBaoR1/0.3"
+    server_version = "XianBaoR1/0.4"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -69,7 +71,27 @@ class Handler(SimpleHTTPRequestHandler):
             return {"mascot_name": DEFAULT_MASCOT_NAME, "configured": False}
 
     def do_POST(self) -> None:
-        if self.path.split("?", 1)[0] != "/api/settings":
+        endpoint = self.path.split("?", 1)[0]
+        if endpoint == "/api/control":
+            try:
+                length = min(int(self.headers.get("Content-Length", "0")), 4096)
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+                self._json({"ok": False, "error": "invalid payload"}, HTTPStatus.BAD_REQUEST)
+                return
+            action, error = validate_control_request(payload)
+            if error or action is None:
+                self._json({"ok": False, "error": error}, HTTPStatus.BAD_REQUEST)
+                return
+            if self.client_address[0] not in {"127.0.0.1", "::1"}:
+                self._json({"ok": False, "error": "controls are only available on the built-in display"}, HTTPStatus.FORBIDDEN)
+                return
+            try:
+                self._json(queue_control_request(self.server.control_dir, action), HTTPStatus.ACCEPTED)
+            except OSError:
+                self._json({"ok": False, "error": "control channel unavailable"}, HTTPStatus.SERVICE_UNAVAILABLE)
+            return
+        if endpoint != "/api/settings":
             self._json({"ok": False, "error": "unknown endpoint"}, HTTPStatus.NOT_FOUND)
             return
         try:
@@ -95,10 +117,22 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path.split("?", 1)[0] == "/api/health":
-            self._json({"ok": True, "version": "0.3.0", "agent": self.server.snapshot_dir.exists()})
+            self._json({"ok": True, "version": "0.4.0", "agent": self.server.snapshot_dir.exists()})
             return
         if self.path.split("?", 1)[0] == "/api/settings":
             self._json(self._settings())
+            return
+        if self.path.split("?", 1)[0] == "/api/control":
+            source = self.server.control_dir / "state.json"
+            if source.is_file():
+                try:
+                    payload = json.loads(source.read_text(encoding="utf-8"))
+                    payload["available"] = self.client_address[0] in {"127.0.0.1", "::1"}
+                    self._json(payload)
+                except (OSError, json.JSONDecodeError):
+                    self._json({"state": "idle", "available": self.client_address[0] in {"127.0.0.1", "::1"}})
+            else:
+                self._json({"state": "idle", "available": self.client_address[0] in {"127.0.0.1", "::1"}})
             return
         if self.path.startswith("/api/"):
             name = self.path.split("?", 1)[0].removeprefix("/api/")
@@ -126,10 +160,11 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 class Server(ThreadingHTTPServer):
-    def __init__(self, address, handler, snapshot_dir: Path, config_dir: Path, mock: bool):
+    def __init__(self, address, handler, snapshot_dir: Path, config_dir: Path, control_dir: Path, mock: bool):
         super().__init__(address, handler)
         self.snapshot_dir = snapshot_dir
         self.config_dir = config_dir
+        self.control_dir = control_dir
         self.mock = mock
 
 
@@ -139,10 +174,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--snapshot-dir", default=os.environ.get("R1_PANEL_RUNTIME_DIR", "/runtime"))
     parser.add_argument("--config-dir", default=os.environ.get("R1_PANEL_CONFIG_DIR", "/config"))
+    parser.add_argument("--control-dir", default=os.environ.get("R1_PANEL_CONTROL_DIR", "/control"))
     parser.add_argument("--mock", action="store_true")
     args = parser.parse_args()
     mimetypes.add_type("application/javascript", ".js")
-    server = Server((args.host, args.port), Handler, Path(args.snapshot_dir), Path(args.config_dir), args.mock)
+    server = Server((args.host, args.port), Handler, Path(args.snapshot_dir), Path(args.config_dir), Path(args.control_dir), args.mock)
     print(f"R1 Panel listening on http://{args.host}:{args.port}", flush=True)
     server.serve_forever()
 
