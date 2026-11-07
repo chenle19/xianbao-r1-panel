@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  agent:
+    image: xianbao-r1-core:0.3.0
+    build: .
+    container_name: r1-panel-agent
+    command: ["python", "/app/server/agent.py"]
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    environment:
+      R1_PANEL_RUNTIME_DIR: /runtime
+      R1_PANEL_HOST_ROOT: /host
+      R1_PANEL_USE_NSENTER: "true"
+      R1_PANEL_MONITOR_PATHS: /host/volume2
+    volumes:
+      - r1-panel-runtime:/runtime
+      - /:/host:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  web:
+    image: xianbao-r1-core:0.3.0
+    build: .
+    container_name: r1-panel-web
+    command: /usr/local/bin/r1-root-launch --prepare-config python /app/server/app.py --host 0.0.0.0 --port 8080 --snapshot-dir /runtime --config-dir /config
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      - agent
+    volumes:
+      - r1-panel-runtime:/runtime:ro
+      - r1-panel-config:/config
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  display:
+    image: xianbao-r1-display:0.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.display
+    container_name: r1-panel-display
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    network_mode: host
+    depends_on:
+      - web
+    environment:
+      PANEL_URL: http://127.0.0.1:8080
+      R1_LOAD_TOUCH: "true"
+    volumes:
+      - /run/udev:/run/udev:ro
+      - /lib/modules:/host-lib-modules:ro
+
+volumes:
+  r1-panel-runtime:
+  r1-panel-config:

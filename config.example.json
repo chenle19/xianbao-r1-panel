@@ -1,0 +1,17 @@
+{
+  "runtime_dir": "/runtime",
+  "host_root": "/host",
+  "smartctl_path": "/usr/bin/smartctl",
+  "smbstatus_path": "/usr/local/packages/@appstore/SMBService/usr/bin/smbstatus",
+  "status_poll_interval_sec": 3,
+  "disk_poll_interval_sec": 15,
+  "activity_poll_interval_sec": 2,
+  "security_poll_interval_sec": 1,
+  "security_window_sec": 10,
+  "security_enabled": false,
+  "inotify_max_watches": 131072,
+  "inotify_max_queued_events": 65536,
+  "monitor_paths": ["/host/volume2"],
+  "avoid_spinup": true,
+  "use_nsenter": true
+}

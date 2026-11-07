@@ -1,0 +1,12 @@
+.git
+.codex-tools
+.publish
+.edge-test
+release
+web/node_modules
+/*.png
+/*.tar.gz
+/*.zip
+tests
+__pycache__
+*.pyc

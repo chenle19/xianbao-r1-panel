@@ -1,0 +1,20 @@
+.codex-tools/
+.publish/
+.edge-test/
+.git/
+web/.git/
+web/node_modules/
+web/*.tsbuildinfo
+web/**/*.tsbuildinfo
+server/**/__pycache__/
+tests/**/__pycache__/
+*.pyc
+*.tar.gz
+*.zip
+*.spk
+release/
+runtime/
+config/settings.json
+
+# Local screenshots and visual-review exports
+/*.png

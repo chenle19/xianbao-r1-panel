@@ -1,0 +1,90 @@
+--- a/drivers/hid/i2c-hid/i2c-hid-core.c
++++ b/drivers/hid/i2c-hid/i2c-hid-core.c
+@@
+ #include <linux/regulator/consumer.h>
++#include <linux/workqueue.h>
+@@
+-	{ I2C_VENDOR_ID_HANTICK, I2C_PRODUCT_ID_HANTICK_5288,
+-		I2C_HID_QUIRK_NO_IRQ_AFTER_RESET },
++	{ I2C_VENDOR_ID_HANTICK, I2C_PRODUCT_ID_HANTICK_5288,
++		I2C_HID_QUIRK_NO_IRQ_AFTER_RESET | I2C_HID_QUIRK_BOGUS_IRQ },
+@@
+ 	bool			irq_wake_enabled;
+ 	struct mutex		reset_lock;
++	bool			polling;
++	struct delayed_work	poll_work;
+ };
+@@
+ static irqreturn_t i2c_hid_irq(int irq, void *dev_id)
+ {
+ 	struct i2c_hid *ihid = dev_id;
+@@
+ 	return IRQ_HANDLED;
+ }
++
++/*
++ * The Hantick 0911:5288 controller used by the R1 panel is functional,
++ * but its GPIO interrupt is not delivered by the older DSM 5.10 GPIO
++ * stack. Poll the normal I2C-HID input register and keep standard parsing.
++ */
++static void i2c_hid_poll_work(struct work_struct *work)
++{
++	struct i2c_hid *ihid = container_of(to_delayed_work(work),
++					       struct i2c_hid, poll_work);
++
++	if (test_bit(I2C_HID_STARTED, &ihid->flags) &&
++	    !test_bit(I2C_HID_READ_PENDING, &ihid->flags))
++		i2c_hid_get_input(ihid);
++
++	schedule_delayed_work(&ihid->poll_work, msecs_to_jiffies(8));
++}
+@@
+ 	ihid->quirks = i2c_hid_lookup_quirk(hid->vendor, hid->product);
++	ihid->polling = hid->vendor == I2C_VENDOR_ID_HANTICK &&
++			hid->product == I2C_PRODUCT_ID_HANTICK_5288;
++	INIT_DELAYED_WORK(&ihid->poll_work, i2c_hid_poll_work);
+ 
+ 	ret = hid_add_device(hid);
+@@
+ 		goto err_mem_free;
+ 	}
++
++	if (ihid->polling) {
++		disable_irq(client->irq);
++		schedule_delayed_work(&ihid->poll_work, 0);
++		dev_info(&client->dev,
++			 "using input polling for Hantick 0911:5288\n");
++	}
+ 
+ 	return 0;
+@@
+ 	hid = ihid->hid;
++	if (ihid->polling)
++		cancel_delayed_work_sync(&ihid->poll_work);
+ 	hid_destroy_device(hid);
+@@
+ static void i2c_hid_shutdown(struct i2c_client *client)
+ {
+ 	struct i2c_hid *ihid = i2c_get_clientdata(client);
+ 
++	if (ihid->polling)
++		cancel_delayed_work_sync(&ihid->poll_work);
+ 	i2c_hid_set_power(client, I2C_HID_PWR_SLEEP);
+@@
+-	disable_irq(client->irq);
++	if (ihid->polling)
++		cancel_delayed_work_sync(&ihid->poll_work);
++	else
++		disable_irq(client->irq);
+@@
+-	enable_irq(client->irq);
++	if (!ihid->polling)
++		enable_irq(client->irq);
+@@
+ 	if (ret)
+ 		return ret;
++
++	if (ihid->polling)
++		schedule_delayed_work(&ihid->poll_work, 0);
+ 
+ 	if (hid->driver && hid->driver->reset_resume) {
