@@ -66,4 +66,4 @@ npm run dev
 
 ## 图标
 
-CPU、内存、硬盘、休眠、系统和网络图标由本地造物台生成，并存放在 `web/src/assets/icons/`。
+CPU、内存、硬盘、休眠、系统和网络图标由ai生成，并存放在 `web/src/assets/icons/`。
