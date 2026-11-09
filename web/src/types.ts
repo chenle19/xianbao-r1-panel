@@ -44,7 +44,7 @@ export interface SettingsPayload {
   configured: boolean
 }
 
-export type ControlAction = 'screen_off' | 'shutdown'
+export type ControlAction = 'screen_off' | 'screen_off_boot' | 'shutdown'
 
 export interface ControlResponse {
   ok: boolean

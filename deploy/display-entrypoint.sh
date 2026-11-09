@@ -29,6 +29,16 @@ set_dpms() {
   [ -n "$connector" ] && modetest -M i915 -w "$connector:2:$value" >/dev/null 2>&1 || true
 }
 
+turn_off_until_reboot() {
+  gpu_device=$(basename "$(readlink -f /sys/class/drm/card0/device 2>/dev/null || true)")
+  case "$gpu_device" in
+    ????:??:??.?) ;;
+    *) return 1 ;;
+  esac
+  [ -e "/sys/bus/pci/drivers/i915/$gpu_device" ] || return 1
+  printf '%s' "$gpu_device" > /sys/bus/pci/drivers/i915/unbind
+}
+
 while true; do
   rm -f "$CONTROL_DIR/screen_on.state"
   set_dpms 0
@@ -36,6 +46,20 @@ while true; do
   cog --platform=drm "$PANEL_URL" &
   COG_PID=$!
   while kill -0 "$COG_PID" 2>/dev/null; do
+    if [ -f "$CONTROL_DIR/screen_off_boot.request" ]; then
+      rm -f "$CONTROL_DIR/screen_off_boot.request"
+      kill "$COG_PID" 2>/dev/null || true
+      wait "$COG_PID" 2>/dev/null || true
+      set_dpms 3
+      echo '{"screen":"turning_off_until_reboot"}' > "$CONTROL_DIR/screen.state"
+      if turn_off_until_reboot; then
+        echo '{"screen":"off_until_reboot"}' > "$CONTROL_DIR/screen.state"
+        while true; do sleep 3600; done
+      fi
+      echo '{"screen":"hard_off_failed"}' > "$CONTROL_DIR/screen.state"
+      set_dpms 0
+      break
+    fi
     if [ -f "$CONTROL_DIR/screen_off.request" ]; then
       rm -f "$CONTROL_DIR/screen_off.request"
       kill "$COG_PID" 2>/dev/null || true

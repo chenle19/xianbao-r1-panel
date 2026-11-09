@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   agent:
-    image: xianbao-r1-core:0.4.0
+    image: xianbao-r1-core:0.4.1
     build: .
     container_name: r1-panel-agent
     command: ["python", "/app/server/agent.py"]
@@ -22,7 +22,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   web:
-    image: xianbao-r1-core:0.4.0
+    image: xianbao-r1-core:0.4.1
     build: .
     container_name: r1-panel-web
     command: /usr/local/bin/r1-root-launch --prepare-data python /app/server/app.py --host 0.0.0.0 --port 8080 --snapshot-dir /runtime --config-dir /config --control-dir /control
@@ -44,7 +44,7 @@ services:
       retries: 3
 
   display:
-    image: xianbao-r1-display:0.4.0
+    image: xianbao-r1-display:0.4.1
     build:
       context: .
       dockerfile: Dockerfile.display

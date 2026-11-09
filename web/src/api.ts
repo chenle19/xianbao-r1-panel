@@ -57,11 +57,16 @@ export async function fetchSecurity(): Promise<SecurityPayload> {
 }
 
 export async function sendControl(action: ControlAction): Promise<ControlResponse> {
+  const confirm = action === 'shutdown'
+    ? { confirm: 'shutdown' }
+    : action === 'screen_off_boot'
+      ? { confirm: 'screen_off_boot' }
+      : {}
   const response = await fetch('/api/control', {
     method: 'POST',
     cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...(action === 'shutdown' ? { confirm: 'shutdown' } : {}) }),
+    body: JSON.stringify({ action, ...confirm }),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   return response.json() as Promise<ControlResponse>

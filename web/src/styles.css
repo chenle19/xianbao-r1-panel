@@ -294,6 +294,13 @@ button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .power-icon { background: rgba(255,95,87,.12); }
 .power-icon i { width: 28px; height: 28px; border: 4px solid #ff8b84; border-top-color: transparent; border-radius: 50%; }
 .power-icon i::before { content: ""; position: absolute; top: 13px; left: 28px; width: 4px; height: 23px; border-radius: 3px; background: #ff8b84; }
+.hard-screen-control { grid-column: 1 / -1; min-height: 118px; grid-template-columns: 72px minmax(0, 1fr); justify-items: start; text-align: left; border-color: rgba(255,179,22,.32); background: rgba(33,23,5,.72); }
+.hard-screen-control:active { background: rgba(54,37,7,.86); }
+.hard-screen-copy { display: grid; gap: 7px; min-width: 0; }
+.hard-screen-copy small { line-height: 1.25; }
+.hard-screen-icon { background: rgba(255,179,22,.12); }
+.hard-screen-icon i { position: relative; display: block; width: 31px; height: 23px; border: 3px solid var(--amber); border-radius: 3px; }
+.hard-screen-icon i::before { content: ""; position: absolute; top: 50%; left: 50%; width: 37px; height: 3px; border-radius: 3px; background: var(--amber); transform: translate(-50%, -50%) rotate(-42deg); }
 .control-error { margin: 0; color: #ff9d97; }
 .device-controls-unavailable { padding: 18px 0; border-top: 1px solid var(--line-strong); color: var(--muted); text-align: center; }
 .shutdown-sheet { position: fixed; inset: 0; z-index: 120; display: grid; place-items: end center; padding: 18px; background: rgba(0,5,7,.86); }
@@ -305,6 +312,13 @@ button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .shutdown-confirm, .shutdown-cancel { width: 100%; min-height: 64px; border: 0; border-radius: 12px; font-weight: 800; touch-action: manipulation; }
 .shutdown-confirm { color: white; background: #d83f3a; }
 .shutdown-cancel { color: var(--text); background: #263338; }
+.hard-screen-dialog { border-color: rgba(255,179,22,.42); background: #171205; }
+.hard-screen-symbol { background: rgba(255,179,22,.12); }
+.hard-screen-symbol i { position: relative; display: block; width: 35px; height: 26px; border: 4px solid var(--amber); border-radius: 4px; }
+.hard-screen-symbol i::before { content: ""; position: absolute; top: 50%; left: 50%; width: 44px; height: 4px; border-radius: 4px; background: var(--amber); transform: translate(-50%, -50%) rotate(-42deg); }
+.hard-screen-dialog p { color: #ead9b4; }
+.hard-screen-warning { padding: 12px; border-radius: 10px; background: rgba(255,179,22,.09); color: #ffc85a !important; text-align: left; }
+.hard-screen-confirm { color: #1b1200; background: var(--amber); }
 .version-row { display: flex; justify-content: space-between; padding: 3px 4px; color: var(--muted); font-size: 10px; }
 .version-row b { color: #b6c8ca; font-weight: 600; }
 

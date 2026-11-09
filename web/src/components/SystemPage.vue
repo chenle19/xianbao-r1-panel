@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchControlState, sendControl } from '../api'
 import systemIcon from '../assets/icons/system.png'
 import { formatUptime } from '../format'
@@ -10,16 +10,18 @@ defineProps<{ status: StatusPayload; security: SecurityPayload; mascotName: stri
 defineEmits<{ editName: [] }>()
 
 const shutdownOpen = ref(false)
-const actionState = ref<'idle' | 'screen' | 'shutdown' | 'error'>('idle')
+const hardScreenOpen = ref(false)
+const actionState = ref<'idle' | 'screen' | 'hard-screen' | 'shutdown' | 'error'>('idle')
 const actionError = ref('')
 const controlsAvailable = ref(false)
+const actionBusy = computed(() => ['screen', 'hard-screen', 'shutdown'].includes(actionState.value))
 
 onMounted(async () => {
   try { controlsAvailable.value = (await fetchControlState()).available } catch { controlsAvailable.value = false }
 })
 
 async function screenOff() {
-  if (actionState.value !== 'idle') return
+  if (actionBusy.value) return
   actionState.value = 'screen'
   actionError.value = ''
   try {
@@ -30,8 +32,21 @@ async function screenOff() {
   }
 }
 
+async function screenOffUntilReboot() {
+  if (actionBusy.value) return
+  actionState.value = 'hard-screen'
+  actionError.value = ''
+  try {
+    await sendControl('screen_off_boot')
+    hardScreenOpen.value = false
+  } catch {
+    actionState.value = 'error'
+    actionError.value = '彻底熄屏失败，屏幕将保持可用'
+  }
+}
+
 async function shutdown() {
-  if (actionState.value === 'shutdown') return
+  if (actionBusy.value) return
   actionState.value = 'shutdown'
   actionError.value = ''
   try {
@@ -86,15 +101,22 @@ async function shutdown() {
     <section v-if="controlsAvailable" class="device-controls">
       <h2>设备控制</h2>
       <div class="device-control-grid">
-        <button type="button" class="device-control screen-control" :disabled="actionState !== 'idle'" @click="screenOff">
+        <button type="button" class="device-control screen-control" :disabled="actionBusy" @click="screenOff">
           <span class="control-icon screen-icon"><i></i></span>
           <strong>{{ actionState === 'screen' ? '正在关闭' : '关闭屏幕' }}</strong>
-          <small>双击屏幕唤醒</small>
+          <small>双击唤醒 · 背光保留</small>
         </button>
-        <button type="button" class="device-control power-control" :disabled="actionState === 'shutdown'" @click="shutdownOpen = true">
+        <button type="button" class="device-control power-control" :disabled="actionBusy" @click="shutdownOpen = true">
           <span class="control-icon power-icon"><i></i></span>
           <strong>安全关机</strong>
           <small>由 DSM 正常关闭</small>
+        </button>
+        <button type="button" class="device-control hard-screen-control" :disabled="actionBusy" @click="hardScreenOpen = true">
+          <span class="control-icon hard-screen-icon"><i></i></span>
+          <span class="hard-screen-copy">
+            <strong>本次开机彻底熄屏</strong>
+            <small>触摸无法唤醒 · 重启 NAS 恢复</small>
+          </span>
         </button>
       </div>
       <p v-if="actionError" class="control-error">{{ actionError }}</p>
@@ -102,7 +124,7 @@ async function shutdown() {
     <section v-else class="device-controls-unavailable">设备控制仅在 R1 内置屏幕开放</section>
 
     <div class="version-row">
-      <span>面板版本</span><b>0.4.0 · 海康威视 R1 专用版</b>
+      <span>面板版本</span><b>0.4.1 · 海康威视 R1 专用版</b>
     </div>
 
     <div v-if="shutdownOpen" class="shutdown-sheet" role="dialog" aria-modal="true" aria-labelledby="shutdown-title">
@@ -112,6 +134,17 @@ async function shutdown() {
         <p>系统会像群晖关机一样，先安全停止服务并卸载磁盘。关机完成前不要断电。</p>
         <button class="shutdown-confirm" type="button" :disabled="actionState === 'shutdown'" @click="shutdown">{{ actionState === 'shutdown' ? '正在提交关机' : '安全关闭 NAS' }}</button>
         <button class="shutdown-cancel" type="button" @click="shutdownOpen = false">取消</button>
+      </div>
+    </div>
+
+    <div v-if="hardScreenOpen" class="shutdown-sheet hard-screen-sheet" role="dialog" aria-modal="true" aria-labelledby="hard-screen-title">
+      <div class="shutdown-dialog hard-screen-dialog">
+        <span class="shutdown-symbol hard-screen-symbol"><i></i></span>
+        <h2 id="hard-screen-title">本次开机彻底熄屏？</h2>
+        <p>屏幕背光会真正关闭，触摸和双击都无法唤醒，只能重启 NAS 恢复。</p>
+        <p class="hard-screen-warning">此模式会暂停 R1 的显卡驱动，视频硬件转码可能暂时不可用；存储与网络服务仍会继续运行。</p>
+        <button class="shutdown-confirm hard-screen-confirm" type="button" :disabled="actionState === 'hard-screen'" @click="screenOffUntilReboot">{{ actionState === 'hard-screen' ? '正在彻底熄屏' : '确认彻底熄屏' }}</button>
+        <button class="shutdown-cancel" type="button" :disabled="actionState === 'hard-screen'" @click="hardScreenOpen = false">取消</button>
       </div>
     </div>
   </div>

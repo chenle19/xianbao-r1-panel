@@ -27,6 +27,15 @@ class ControlRequestTest(unittest.TestCase):
     def test_screen_off_request(self):
         self.assertEqual(validate_control_request({"action": "screen_off"}), ("screen_off", None))
 
+    def test_screen_off_until_reboot_requires_explicit_confirmation(self):
+        action, error = validate_control_request({"action": "screen_off_boot"})
+        self.assertIsNone(action)
+        self.assertEqual(error, "screen off until reboot confirmation required")
+        self.assertEqual(
+            validate_control_request({"action": "screen_off_boot", "confirm": "screen_off_boot"}),
+            ("screen_off_boot", None),
+        )
+
     def test_shutdown_requires_explicit_confirmation(self):
         action, error = validate_control_request({"action": "shutdown"})
         self.assertIsNone(action)

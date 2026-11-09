@@ -6,7 +6,7 @@ from pathlib import Path
 
 from collectors.common import atomic_write_json, host_command, now_iso
 
-ALLOWED_ACTIONS = {"screen_off", "shutdown"}
+ALLOWED_ACTIONS = {"screen_off", "screen_off_boot", "shutdown"}
 
 
 def validate_control_request(payload: object) -> tuple[str | None, str | None]:
@@ -17,6 +17,8 @@ def validate_control_request(payload: object) -> tuple[str | None, str | None]:
         return None, "unsupported action"
     if action == "shutdown" and payload.get("confirm") != "shutdown":
         return None, "shutdown confirmation required"
+    if action == "screen_off_boot" and payload.get("confirm") != "screen_off_boot":
+        return None, "screen off until reboot confirmation required"
     return action, None
 
 

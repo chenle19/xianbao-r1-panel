@@ -37,7 +37,7 @@ def mock_payload(name: str) -> dict:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "XianBaoR1/0.4"
+    server_version = "XianBaoR1/0.4.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -117,7 +117,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path.split("?", 1)[0] == "/api/health":
-            self._json({"ok": True, "version": "0.4.0", "agent": self.server.snapshot_dir.exists()})
+            self._json({"ok": True, "version": "0.4.1", "agent": self.server.snapshot_dir.exists()})
             return
         if self.path.split("?", 1)[0] == "/api/settings":
             self._json(self._settings())
